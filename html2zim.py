@@ -57,7 +57,34 @@ class Html2ZimParser(HTMLParser):
 			a_tag += ') '
 		'''
 		self._append_to_zim(a_tag)
-
+	'''
+	#<img />
+	def handle_end_img(self):
+		img_tag = ''
+		ref = self._tag_attr_data.get('href')
+		if ref:
+			img_tag += '[[' +self._tag_attr_data.get('href') 
+			title = self._tag_attr_data.get('title')
+			if title:
+				img_tag += ' | '+ title
+			img_tag += ']] '
+		img_tag += '{{' + self._tag_attr_data.get('src') + '}}'
+		
+		self._append_to_zim(img_tag)
+	'''
+	
+	#<img>
+	def handle_start_img(self, attr):
+		img_tag = ''
+		attr = dict(attr)
+		if attr.has_key('href'):
+			img_tag += '[[' + attr['href']
+			if attr.has_key('title'):
+				img_tag += ' | '+ attr['title']
+			img_tag += ']] '
+		img_tag += '{{' + attr['src'] + '}}'
+		
+		self._append_to_zim(img_tag)
 	#<img />
 	def handle_end_img(self):
 		img_tag = ''
@@ -228,10 +255,10 @@ class Html2ZimParser(HTMLParser):
 
 def main():
 	p = Html2ZimParser()
-	buf = sys.stdin.read()
+	buf = sys.stdin.read().decode('utf-8')
 	p.feed(buf)
 	p.close()
-	print p.get_zim()
+	print p.get_zim().encode('utf-8')
 
 if __name__ == "__main__":
 	sys.exit(main())
