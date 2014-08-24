@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# @author: macrobull
+# @Github: https://github.com/MacroBull/html2zim
 
 from HTMLParser import HTMLParser
 
