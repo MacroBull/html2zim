@@ -99,7 +99,7 @@ class Html2ZimParser(HTMLParser):
 	def handle_start_img(self, attr):
 		img_tag = ''
 		attr = dict(attr)
-		src = attr.get('src') if attr.has_key('style') and attr['style'].find("hidden")<0 else None
+		src = attr.get('src') if not attr.has_key('style') or attr['style'].find("hidden")<0 else None
 		if src and imgDownTool and re.match('.*tp.*://.*', src): # valid full URL
 			img_tag += '{{' + imgDownaPath + '/' + url2local(attr['src']) + '}}'
 			if imgDownTool == 'wget':
@@ -123,7 +123,7 @@ class Html2ZimParser(HTMLParser):
 		img_tag = ''
 		ref = self._tag_attr_data.get('href')
 		#src = self._tag_attr_data.get('src')
-		src = attr.get('src') if attr['style'].find("hidden")<0 else None
+		src = attr.get('src') if not attr.has_key('style') or attr['style'].find("hidden")<0 else None
 		if src and imgDownTool and re.match('.*tp.*://.*', src): # valid full URL
 			img_tag += '{{' + imgDownaPath + '/' + url2local(src) + '}}'
 			if imgDownTool == 'wget':
