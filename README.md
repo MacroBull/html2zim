@@ -37,6 +37,6 @@ Parameters
     -k to download with kio, -w with wget
     
     
-Screenshot
+Screenshot (page from http://www.wikiwand.com/en/Ball_tree)
 ----
 ![Screenshot](./ss.png)
