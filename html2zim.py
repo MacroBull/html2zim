@@ -25,6 +25,7 @@ class Html2ZimParser(HTMLParser):
 		self._tag_attr_data = {}
 		self._text = ''
 		self._zim = ''
+		self._hold = False
 		#self._convertible_tags = ['a',
 								  #'b', 'blockquote',
 								  #'em',
@@ -42,14 +43,16 @@ class Html2ZimParser(HTMLParser):
 		HTMLParser.__init__(self)
 
 	def _append_to_zim(self):
-		self._zim += self._text
-		self._text = ''
+		if not self._hold:
+			self._zim += self._text
+			self._text = ''
 
 
 	######################links#################################
 	# <a /> Zim do not support format in url discriptions
 	def handle_start_a(self, attrs):
 		self._attrs = attrs
+		self._hold = True
 #		url = dict(attrs).get('href')
 #		if url.startswith('/'):
 #			url = url.replace('/', ':')
@@ -68,10 +71,12 @@ class Html2ZimParser(HTMLParser):
 			url = '+' + url[1:].replace('/', ':')
 		elif url.startswith('../'):
 			url = url[3:].replace('/', ':')
-		disc = self._text
+
+		disc = self._text.strip()
 		if disc:
 			disc = ' | '+ disc
-		self._text += '[[' + url + disc + ']]'
+		self._text = '[[ ' + url + disc + ' ]]'
+		self._hold = False
 		self._append_to_zim()
 
 	'''
@@ -94,13 +99,17 @@ class Html2ZimParser(HTMLParser):
 	def handle_start_img(self, attr):
 		img_tag = ''
 		attr = dict(attr)
-		src = attr.get('src')
+		src = attr.get('src') if attr.has_key('style') and attr['style'].find("hidden")<0 else None
 		if src and imgDownTool and re.match('.*tp.*://.*', src): # valid full URL
 			img_tag += '{{' + imgDownaPath + '/' + url2local(attr['src']) + '}}'
 			if imgDownTool == 'wget':
 				os.popen2('wget "' + src + '" -O "' + imgDownaPath + '/' + url2local(attr['src']) +'" 2>/dev/null')
 			elif imgDownTool == 'kio':
 				os.popen2('kioclient copy --overwrite "' + src + '" "' + imgDownaPath + '/' + url2local(attr['src']) +'" 2>/dev/null')
+		else:
+			if attr.has_key('alt'):
+				img_tag += '(image:' + attr.get('alt') + ')'
+
 		if attr.has_key('href'):
 			img_tag += os.linesep + '[[' + attr['href']
 			if attr.has_key('title'):
@@ -113,7 +122,8 @@ class Html2ZimParser(HTMLParser):
 	def handle_end_img(self):
 		img_tag = ''
 		ref = self._tag_attr_data.get('href')
-		src = self._tag_attr_data.get('src')
+		#src = self._tag_attr_data.get('src')
+		src = attr.get('src') if attr['style'].find("hidden")<0 else None
 		if src and imgDownTool and re.match('.*tp.*://.*', src): # valid full URL
 			img_tag += '{{' + imgDownaPath + '/' + url2local(src) + '}}'
 			if imgDownTool == 'wget':
@@ -131,35 +141,47 @@ class Html2ZimParser(HTMLParser):
 
 
 	######################headers#################################
+	def handle_start_h1(self, attr):
+		self._hold = True
+
+	handle_start_h2 = handle_start_h3 = handle_start_h1
+	handle_start_h4 = handle_start_h5 = handle_start_h1
+	handle_start_h6 = handle_start_h1
 
 	# <h1 />
 	def handle_end_h1(self):
-		self._text = os.linesep + '====== ' + self._text.replace(os.linesep, ' ') + ' ======' + os.linesep
+		self._text = os.linesep + '====== ' + self._text.replace(os.linesep, ' ').strip() + ' ======' + os.linesep
+		self._hold = False
 		self._append_to_zim()
 
 	# <h2 />
 	def handle_end_h2(self):
-		self._text = os.linesep + '===== ' + self._text.replace(os.linesep, ' ') + ' =====' + os.linesep
+		self._text = os.linesep + '===== ' + self._text.replace(os.linesep, ' ').strip() + ' =====' + os.linesep
+		self._hold = False
 		self._append_to_zim()
 
 	# <h3 />
 	def handle_end_h3(self):
-		self._text = os.linesep + '==== ' + self._text.replace(os.linesep, ' ') + ' ====' + os.linesep
+		self._text = os.linesep + '==== ' + self._text.replace(os.linesep, ' ').strip() + ' ====' + os.linesep
+		self._hold = False
 		self._append_to_zim()
 
 	# <h4 />
 	def handle_end_h4(self):
-		self._text = os.linesep + '=== ' + self._text.replace(os.linesep, ' ') + ' ===' + os.linesep
+		self._text = os.linesep + '=== ' + self._text.replace(os.linesep, ' ').strip() + ' ===' + os.linesep
+		self._hold = False
 		self._append_to_zim()
 
 	# <h5 />
 	def handle_end_h5(self):
-		self._text = os.linesep + '== ' + self._text.replace(os.linesep, ' ') + ' ==' + os.linesep
+		self._text = os.linesep + '== ' + self._text.replace(os.linesep, ' ').strip() + ' ==' + os.linesep
+		self._hold = False
 		self._append_to_zim()
 
 	# <h6 />
 	def handle_end_h6(self):
-		self._text = os.linesep + '####' + self._text.replace(os.linesep, ' ') + ' ####' + os.linesep
+		self._text = os.linesep + '####' + self._text.replace(os.linesep, ' ').strip() + ' ####' + os.linesep
+		self._hold = False
 		self._append_to_zim()
 
 
@@ -167,6 +189,7 @@ class Html2ZimParser(HTMLParser):
 
 	# <li />
 	def handle_start_li(self, attrs):
+		self._text = self._text.strip() + os.linesep
 		if len(self._tag_stack):
 			if self._tag_stack[-1] == 'ol':
 				order = 'a.	' if (self._ol_depth & 1) else '1.	'
@@ -178,7 +201,7 @@ class Html2ZimParser(HTMLParser):
 
 
 	def handle_end_li(self):
-		self._text += os.linesep
+#		self._text = self._text.strip() + os.linesep
 		self._append_to_zim()
 
 
@@ -187,12 +210,16 @@ class Html2ZimParser(HTMLParser):
 
 	def handle_end_ol(self):
 		self._ol_depth -=1
+		self._text = os.linesep
+		self._append_to_zim()
 
 	def handle_start_ul(self, attrs):
 		self._ul_depth +=1
 
 	def handle_end_ul(self):
 		self._ul_depth -=1
+		self._text = os.linesep
+		self._append_to_zim()
 
 	# checkbox <input>
 	def handle_start_input(self, attr):
@@ -223,6 +250,7 @@ class Html2ZimParser(HTMLParser):
 
 	# <p />
 	def handle_end_p(self):
+		self._text += os.linesep
 		self._append_to_zim()
 
 	# <b />
@@ -240,11 +268,11 @@ class Html2ZimParser(HTMLParser):
 
 	# <pre />
 	def handle_start_pre(self, attr):
-		self._text += "''"
+		self._text = self._text.strip() + os.linesep + "''" + os.linesep
 		self._append_to_zim()
 
 	def handle_end_pre(self):
-		self._text += "''"
+		self._text += "''"  + os.linesep + os.linesep
 		self._append_to_zim()
 
 	# <code />
@@ -293,10 +321,36 @@ class Html2ZimParser(HTMLParser):
 		self._text += '~~'
 		self._append_to_zim()
 
+	# <sub />
+	def handle_start_sub(self, attr):
+		self._text += '_{'
+		self._append_to_zim()
+
+	def handle_end_sub(self):
+		self._text += '}'
+		self._append_to_zim()
+
 	#<del />
 	handle_start_del = handle_start_strike
 	handle_end_del = handle_end_strike
 
+	def handle_end_td(self):
+		self._text += '\t'
+		self._append_to_zim()
+
+	def handle_end_tr(self):
+		self._text += '\n'
+		self._append_to_zim()
+
+
+	def handle_end_default(self):
+		self._append_to_zim()
+
+	handle_end_div = handle_end_default
+
+
+	def handle_end_font(self):
+		self._append_to_zim()
 
 	#######################Kernel################################
 	def handle_starttag(self, tag, attrs):
@@ -308,6 +362,8 @@ class Html2ZimParser(HTMLParser):
 
 	def handle_endtag(self, tag):
 		self._tag_stack.pop()
+#		if self._text.strip(): # Some of empty tags
+		if not self._text: self._text +=' '
 		try:
 			eval('self.handle_end_' + tag + '()')
 			# Collapse three successive CRs into two before moving on
@@ -318,7 +374,7 @@ class Html2ZimParser(HTMLParser):
 			pass
 
 		self._tag_attr_data = {}
-		self._text = ''
+		if not self._hold: self._text = ''
 
 	def handle_data(self, data):
 		#data = os.linesep.join(map(string.strip, data.strip().split(os.linesep)))
@@ -353,7 +409,7 @@ def main():
 
 	p = Html2ZimParser()
 	if len(sys.argv)>1:
-		buf = open(sys.argv[1]).read()
+		buf = open(sys.argv[1]).read().decode('utf-8')
 	else:
 		buf = sys.stdin.read().decode('utf-8')
 	p.feed(buf)
