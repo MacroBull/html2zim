@@ -11,10 +11,21 @@ import re
 imgDownTool = None
 imgDownaPath = None
 
-def url2local(url):
-	for s in [':', '/']:
+def imgUrl2local(url):
+	for sub in ['png', 'jpg', 'jpeg', 'webp', 'gif']:
+		sub = '.' + sub
+		p = url.find(sub)
+		if p>=0:
+			#pNext = p
+			#while pNext >=0:
+				#p = pNext
+				#pNext = url[p+1:].find(sub)
+			#url = url[:p+len(sub)]
+			url += sub
+			break
+	for s in [':', '/', '?', '!', '&']:
 		url = url.replace(s, '_')
-	return url[-128:]
+	return url[-75:]
 
 class Html2ZimParser(HTMLParser):
 	def __init__(self):
@@ -52,6 +63,7 @@ class Html2ZimParser(HTMLParser):
 	# <a /> Zim do not support format in url discriptions
 	def handle_start_a(self, attrs):
 		self._attrs = attrs
+		self._append_to_zim()
 		self._hold = True
 #		url = dict(attrs).get('href')
 #		if url.startswith('/'):
@@ -101,11 +113,11 @@ class Html2ZimParser(HTMLParser):
 		attr = dict(attr)
 		src = attr.get('src') if not attr.has_key('style') or attr['style'].find("hidden")<0 else None
 		if src and imgDownTool and re.match('.*tp.*://.*', src): # valid full URL
-			img_tag += '{{' + imgDownaPath + '/' + url2local(attr['src']) + '}}'
+			img_tag += '{{' + imgDownaPath + '/' + imgUrl2local(attr['src']) + '}}'
 			if imgDownTool == 'wget':
-				os.popen2('wget "' + src + '" -O "' + imgDownaPath + '/' + url2local(attr['src']) +'" 2>/dev/null')
+				os.popen2('wget "' + src + '" -O "' + imgDownaPath + '/' + imgUrl2local(attr['src']) +'" 2>/dev/null')
 			elif imgDownTool == 'kio':
-				os.popen2('kioclient copy --overwrite "' + src + '" "' + imgDownaPath + '/' + url2local(attr['src']) +'" 2>/dev/null')
+				os.popen2('kioclient copy --overwrite "' + src + '" "' + imgDownaPath + '/' + imgUrl2local(attr['src']) +'" 2>/dev/null')
 		else:
 			if attr.has_key('alt'):
 				img_tag += '(image:' + attr.get('alt') + ')'
@@ -125,11 +137,11 @@ class Html2ZimParser(HTMLParser):
 		#src = self._tag_attr_data.get('src')
 		src = attr.get('src') if not attr.has_key('style') or attr['style'].find("hidden")<0 else None
 		if src and imgDownTool and re.match('.*tp.*://.*', src): # valid full URL
-			img_tag += '{{' + imgDownaPath + '/' + url2local(src) + '}}'
+			img_tag += '{{' + imgDownaPath + '/' + imgUrl2local(src) + '}}'
 			if imgDownTool == 'wget':
-				os.popen2('wget "' + src + '" -O "' + imgDownaPath + '/' + url2local(attr['src']) +'" 2>/dev/null')
+				os.popen2('wget "' + src + '" -O "' + imgDownaPath + '/' + imgUrl2local(attr['src']) +'" 2>/dev/null')
 			elif imgDownTool == 'kio':
-				os.popen2('kioclient copy --overwrite "' + src + '" "' + imgDownaPath + '/' + url2local(attr['src']) +'" 2>/dev/null')
+				os.popen2('kioclient copy --overwrite "' + src + '" "' + imgDownaPath + '/' + imgUrl2local(attr['src']) +'" 2>/dev/null')
 		if ref:
 			img_tag += os.linesep +'[[' +self._tag_attr_data.get('href')
 			title = self._tag_attr_data.get('title')
